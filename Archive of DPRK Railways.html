@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>조선철도기록보관소 · Archive of the Railways of the DPRK</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Noto+Serif+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="chrome.jsx"></script>
+<script type="text/babel" src="pages.jsx"></script>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "paper",
+  "density": "normal",
+  "accentHue": 25,
+  "showAdminBar": true,
+  "showSidebar": true,
+  "serifBodyFont": "EB Garamond"
+}/*EDITMODE-END*/;
+
+function App() {
+  const { useState, useEffect } = React;
+  const [tweaks, setTweaks] = useTweaks(TWEAK_DEFAULTS);
+  const [page, setPage] = useState("home");
+  const [locoId, setLocoId] = useState("red-flag-5100");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", tweaks.theme === "paper" ? "" : tweaks.theme);
+    document.documentElement.setAttribute("data-density", tweaks.density);
+    document.documentElement.style.setProperty("--accent", `oklch(0.48 0.12 ${tweaks.accentHue})`);
+    if (tweaks.serifBodyFont) {
+      document.documentElement.style.setProperty("--serif", `"${tweaks.serifBodyFont}", Georgia, serif`);
+    }
+  }, [tweaks.theme, tweaks.density, tweaks.accentHue, tweaks.serifBodyFont]);
+
+  const openLoco = (id) => { setLocoId(id); setPage("article"); window.scrollTo(0, 0); };
+  const openArticle = (id) => { setPage("article"); window.scrollTo(0, 0); };
+  const nav = (id) => { setPage(id); window.scrollTo(0, 0); };
+
+  let body;
+  if (page === "home")     body = <HomePage onNav={nav} onOpenLoco={openLoco} onOpenArticle={openArticle} />;
+  else if (page === "roster")   body = <RosterPage onOpenLoco={openLoco} />;
+  else if (page === "lines")    body = <LinesPage />;
+  else if (page === "stations") body = <StationsPage />;
+  else if (page === "article")  body = <ArticlePage locoId={locoId} />;
+  else if (page === "glossary") body = <GlossaryPage />;
+
+  return (
+    <React.Fragment>
+      {tweaks.showAdminBar && <AdminBar />}
+      <Masthead />
+      <PrimaryNav current={page} onNav={nav} />
+      <div className={tweaks.showSidebar ? "" : "no-sidebar"}>
+        {body}
+      </div>
+      <Footer />
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Theme">
+          <TweakRadio
+            label="Palette"
+            value={tweaks.theme}
+            onChange={v => setTweaks({theme: v})}
+            options={[
+              {value: "paper", label: "Archive paper"},
+              {value: "dark", label: "Night reading"},
+              {value: "blueprint", label: "Blueprint (cyanotype)"}
+            ]}
+          />
+          <TweakSlider label="Accent hue" min={0} max={360} step={5}
+            value={tweaks.accentHue} onChange={v => setTweaks({accentHue: v})} />
+        </TweakSection>
+
+        <TweakSection title="Layout">
+          <TweakRadio label="Density" value={tweaks.density}
+            onChange={v => setTweaks({density: v})}
+            options={[
+              {value: "compact", label: "Compact"},
+              {value: "normal", label: "Normal"},
+              {value: "roomy", label: "Roomy"}
+            ]} />
+          <TweakToggle label="Show WP admin bar" checked={tweaks.showAdminBar}
+            onChange={v => setTweaks({showAdminBar: v})} />
+          <TweakToggle label="Show sidebar" checked={tweaks.showSidebar}
+            onChange={v => setTweaks({showSidebar: v})} />
+        </TweakSection>
+
+        <TweakSection title="Typography">
+          <TweakSelect label="Body serif" value={tweaks.serifBodyFont}
+            onChange={v => setTweaks({serifBodyFont: v})}
+            options={[
+              {value:"EB Garamond", label:"EB Garamond"},
+              {value:"Noto Serif KR", label:"Noto Serif KR"},
+              {value:"Georgia", label:"Georgia"}
+            ]} />
+        </TweakSection>
+
+        <TweakSection title="Navigation">
+          <TweakButton label="▸ Home"         onClick={() => nav("home")} />
+          <TweakButton label="▸ Rolling Stock" onClick={() => nav("roster")} />
+          <TweakButton label="▸ Lines & Map"   onClick={() => nav("lines")} />
+          <TweakButton label="▸ Stations"      onClick={() => nav("stations")} />
+          <TweakButton label="▸ Long Reads"    onClick={() => nav("article")} />
+          <TweakButton label="▸ Glossary"      onClick={() => nav("glossary")} />
+        </TweakSection>
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+
+<style>
+  .no-sidebar .page { grid-template-columns: 1fr !important; }
+  .no-sidebar aside.sidebar { display: none !important; }
+</style>
+
+</body>
+</html>
